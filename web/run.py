@@ -5,14 +5,19 @@ Usage:
     python web/run.py
 
 Then open http://127.0.0.1:9090 in your browser.
-
-If you get a port error, change PORT below or use:
-    python -m uvicorn web.app:app --host 127.0.0.1 --port 9090 --reload
 """
+
+import sys
+import os
+from pathlib import Path
+
+# Add project root to Python path so `web` and `src` packages are findable
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 import uvicorn
 
-PORT = 9090  # Change if this port is in use on your machine
+PORT = 9090
 
 if __name__ == "__main__":
     print(f"Starting InfoFunnel at http://127.0.0.1:{PORT}")
