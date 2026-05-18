@@ -191,7 +191,7 @@
 
         async function deleteTopic(name) {
             if (!confirm(`Are you sure you want to delete "${name}"? This cannot be undone.`)) return;
-            const resp = await fetch(`/api/topics/${encodeURIComponent(name)}`, { method: 'DELETE' });
+            const resp = await fetch(`/api/topics/${encodeURIComponent(name)}/delete`, { method: 'POST' });
             if (resp.ok) {
                 const card = document.getElementById(`topic-${name}`);
                 if (card) card.remove();

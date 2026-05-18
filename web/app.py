@@ -141,7 +141,7 @@ async def api_disable_topic(topic_name: str):
     return {"status": "ok", "action": "disabled", "topic": topic_name}
 
 
-@app.delete("/api/topics/{topic_name}")
+@app.post("/api/topics/{topic_name}/delete")
 async def api_delete_topic(topic_name: str):
     """Delete a topic permanently."""
     config = _load_config()

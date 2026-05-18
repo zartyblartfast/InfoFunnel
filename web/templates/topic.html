@@ -138,7 +138,7 @@
 
         async function deleteTopic() {
             if (!confirm('Are you sure you want to delete "{{ topic.name }}"? This cannot be undone.')) return;
-            const resp = await fetch(`/api/topics/{{ topic.name }}`, { method: 'DELETE' });
+            const resp = await fetch(`/api/topics/{{ topic.name }}/delete`, { method: 'POST' });
             if (resp.ok) window.location.href = '/';
             else alert(`Error: ${(await resp.json()).detail}`);
         }
