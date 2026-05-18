@@ -17,6 +17,9 @@ An intelligent background news and information monitoring system built on Hermes
 # Install
 pip install -e .
 
+# Install web dependencies (optional)
+pip install -e ".[web]"
+
 # Configure
 cp config/news-monitor.example.yaml config/news-monitor.yaml
 # Edit config/news-monitor.yaml with your topics and sources
@@ -30,6 +33,10 @@ productivity-agent test Bitcoin
 
 # Run a digest manually
 productivity-agent digest
+
+# Start web dashboard
+python web/run.py
+# Then open http://127.0.0.1:9000 in your browser
 ```
 
 ## Configuration

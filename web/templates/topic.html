@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ topic.name }} - InfoFunnel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #1e293b; }
+        header h1 { font-size: 1.5rem; color: #38bdf8; }
+        header h1 a { color: #94a3b8; text-decoration: none; }
+        header h1 a:hover { color: #38bdf8; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-enabled { background: #166534; color: #86efac; }
+        .badge-disabled { background: #7f1d1d; color: #fca5a5; }
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
+        .btn-primary { background: #38bdf8; color: #0f1117; }
+        .btn-success { background: #22c55e; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+        .card { background: #1e293b; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+        .card h2 { font-size: 1rem; color: #94a3b8; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .meta { color: #94a3b8; font-size: 0.85rem; }
+        .tag { display: inline-block; background: #334155; color: #94a3b8; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.8rem; margin: 0.2rem; }
+        .tag.include { background: #1e3a5f; color: #7dd3fc; }
+        .tag.exclude { background: #5f1e1e; color: #fca5a5; }
+        .actions { display: flex; gap: 0.5rem; margin-top: 1.5rem; }
+        .rules { background: #0f1117; border-radius: 6px; padding: 1rem; white-space: pre-wrap; font-family: monospace; font-size: 0.85rem; color: #94a3b8; border: 1px solid #334155; }
+        .back { color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
+        .back:hover { color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><a href="/">InfoFunnel</a> / {{ topic.name }}</h1>
+            <span class="badge {{ 'badge-enabled' if topic.enabled else 'badge-disabled' }}">
+                {{ 'ENABLED' if topic.enabled else 'DISABLED' }}
+            </span>
+        </header>
+
+        <a href="/" class="back">&larr; Back to Dashboard</a>
+
+        <div class="card">
+            <h2>Summary</h2>
+            <p>{{ topic.summary or 'No description' }}</p>
+            <p class="meta" style="margin-top: 0.5rem;">Max items per digest: {{ topic.max_items | default(3) }}</p>
+        </div>
+
+        <div class="card">
+            <h2>RSS Feeds ({{ topic.rss_feeds | length }})</h2>
+            {% if topic.rss_feeds %}
+                {% for feed in topic.rss_feeds %}
+                <span class="tag include">{{ feed }}</span>
+                {% endfor %}
+            {% else %}
+                <p class="meta">No RSS feeds configured</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>X Search Queries ({{ topic.x_queries | length }})</h2>
+            {% if topic.x_queries %}
+                {% for q in topic.x_queries %}
+                <div style="margin-bottom: 0.5rem;">
+                    <span class="tag include">{{ q }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="meta">No X queries configured</p>
+            {% endif %}
+        </div>
+
+        {% if topic.x_allowed_handles %}
+        <div class="card">
+            <h2>X Allowed Handles ({{ topic.x_allowed_handles | length }})</h2>
+            {% for h in topic.x_allowed_handles %}
+            <span class="tag include">@{{ h }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if topic.x_excluded_handles %}
+        <div class="card">
+            <h2>X Excluded Handles ({{ topic.x_excluded_handles | length }})</h2>
+            {% for h in topic.x_excluded_handles %}
+            <span class="tag exclude">@{{ h }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <h2>Keywords</h2>
+            <p class="meta" style="margin-bottom: 0.5rem;">Include:</p>
+            {% if topic.keywords_include %}
+                {% for kw in topic.keywords_include %}
+                <span class="tag include">{{ kw }}</span>
+                {% endfor %}
+            {% else %}
+                <span class="meta">Any</span>
+            {% endif %}
+
+            <p class="meta" style="margin: 0.75rem 0 0.5rem;">Exclude:</p>
+            {% if topic.keywords_exclude %}
+                {% for kw in topic.keywords_exclude %}
+                <span class="tag exclude">{{ kw }}</span>
+                {% endfor %}
+            {% else %}
+                <span class="meta">None</span>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>Importance Rules</h2>
+            <div class="rules">{{ topic.importance_rules or 'Not defined' }}</div>
+        </div>
+
+        <div class="actions">
+            {% if topic.enabled %}
+            <button class="btn btn-danger" onclick="toggleTopic(false)">Disable Topic</button>
+            {% else %}
+            <button class="btn btn-success" onclick="toggleTopic(true)">Enable Topic</button>
+            {% endif %}
+            <a href="/api/topics/{{ topic.name }}/test" class="btn btn-primary">View Test Output</a>
+        </div>
+    </div>
+
+    <script>
+        async function toggleTopic(enable) {
+            const action = enable ? 'enable' : 'disable';
+            const resp = await fetch(`/api/topics/{{ topic.name }}/${action}`, { method: 'POST' });
+            if (resp.ok) {
+                location.reload();
+            } else {
+                const data = await resp.json();
+                alert(`Error: ${data.detail}`);
+            }
+        }
+    </script>
+</body>
+</html>

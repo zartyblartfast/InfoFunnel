@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfoFunnel - Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #1e293b; }
+        header h1 { font-size: 1.5rem; color: #38bdf8; }
+        header h1 span { color: #94a3b8; font-weight: 400; }
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+        .btn-primary { background: #38bdf8; color: #0f1117; }
+        .btn-primary:hover { background: #7dd3fc; }
+        .btn-success { background: #22c55e; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+        .card { background: #1e293b; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .card h2 { font-size: 1.1rem; color: #f1f5f9; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-enabled { background: #166534; color: #86efac; }
+        .badge-disabled { background: #7f1d1d; color: #fca5a5; }
+        .meta { color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.5rem; }
+        .tag { display: inline-block; background: #334155; color: #94a3b8; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin: 0.15rem; }
+        .tag.include { background: #1e3a5f; color: #7dd3fc; }
+        .tag.exclude { background: #5f1e1e; color: #fca5a5; }
+        .actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: #1e293b; border-radius: 10px; padding: 1.25rem; border: 1px solid #334155; text-align: center; }
+        .stat-card .number { font-size: 2rem; font-weight: 700; color: #38bdf8; }
+        .stat-card .label { color: #94a3b8; font-size: 0.85rem; margin-top: 0.25rem; }
+        .config-path { color: #64748b; font-size: 0.8rem; font-family: monospace; }
+        a { color: #38bdf8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .empty-state { text-align: center; padding: 3rem; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>InfoFunnel <span>Dashboard</span></h1>
+            <a href="/docs" class="btn btn-primary btn-sm">API Docs</a>
+        </header>
+
+        <!-- Global Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="number">{{ config.topics | length }}</div>
+                <div class="label">Total Topics</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ config.topics | selectattr('enabled') | list | length }}</div>
+                <div class="label">Enabled</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ config.global.max_total_items | default(10) }}</div>
+                <div class="label">Max Items/Digest</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ config.global.schedule.split()[:2] | join(' ') if config.global.schedule else 'N/A' }}</div>
+                <div class="label">Schedule</div>
+            </div>
+        </div>
+
+        <!-- Topics -->
+        {% if config.topics %}
+            {% for topic in config.topics %}
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>
+                            <a href="/topic/{{ topic.name }}">{{ topic.name }}</a>
+                            <span class="badge {{ 'badge-enabled' if topic.enabled else 'badge-disabled' }}">
+                                {{ 'ENABLED' if topic.enabled else 'DISABLED' }}
+                            </span>
+                        </h2>
+                        <p class="meta">{{ topic.summary or 'No description' }}</p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <p class="meta" style="margin-bottom: 0.5rem;">RSS Feeds ({{ topic.rss_feeds | length }})</p>
+                        {% if topic.rss_feeds %}
+                            {% for feed in topic.rss_feeds %}
+                            <span class="tag include">{{ feed }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="meta">None configured</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <p class="meta" style="margin-bottom: 0.5rem;">X Queries ({{ topic.x_queries | length }})</p>
+                        {% if topic.x_queries %}
+                            {% for q in topic.x_queries[:3] %}
+                            <span class="tag include">{{ q[:30] }}{{ '...' if q | length > 30 }}</span>
+                            {% endfor %}
+                            {% if topic.x_queries | length > 3 %}
+                            <span class="tag">+{{ topic.x_queries | length - 3 }} more</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="meta">None configured</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if topic.x_allowed_handles %}
+                <p class="meta" style="margin-bottom: 0.5rem;">X Allowed Handles ({{ topic.x_allowed_handles | length }})</p>
+                {% for h in topic.x_allowed_handles[:8] %}
+                <span class="tag include">@{{ h }}</span>
+                {% endfor %}
+                {% if topic.x_allowed_handles | length > 8 %}
+                <span class="tag">+{{ topic.x_allowed_handles | length - 8 }} more</span>
+                {% endif %}
+                {% endif %}
+
+                <div class="actions">
+                    {% if topic.enabled %}
+                    <button class="btn btn-danger btn-sm" onclick="toggleTopic('{{ topic.name }}', false)">Disable</button>
+                    {% else %}
+                    <button class="btn btn-success btn-sm" onclick="toggleTopic('{{ topic.name }}', true)">Enable</button>
+                    {% endif %}
+                    <a href="/api/topics/{{ topic.name }}/test" class="btn btn-primary btn-sm">Test</a>
+                    <a href="/topic/{{ topic.name }}" class="btn btn-primary btn-sm">Details</a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <h2>No topics configured</h2>
+                <p>Add topics to config/news-monitor.yaml to get started.</p>
+            </div>
+        {% endif %}
+
+        <p class="config-path">Config: {{ config_path }}</p>
+    </div>
+
+    <script>
+        async function toggleTopic(name, enable) {
+            const action = enable ? 'enable' : 'disable';
+            const resp = await fetch(`/api/topics/${encodeURIComponent(name)}/${action}`, { method: 'POST' });
+            if (resp.ok) {
+                location.reload();
+            } else {
+                const data = await resp.json();
+                alert(`Error: ${data.detail}`);
+            }
+        }
+    </script>
+</body>
+</html>
