@@ -2,18 +2,23 @@
 
 import os
 import sys
+import subprocess
+import json
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # Add src/ to path so we can import the package
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import yaml
 
-from productivity_agent.config import load_config, get_topic, ConfigError
+from productivity_agent.config import load_config, get_topic, ConfigError, get_enabled_topics
+from productivity_agent.sources.rss import RSSSource
+from productivity_agent.filtering import FilterEngine
+from productivity_agent.digest import DigestGenerator
 
 # Determine project root (parent of web/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -77,6 +82,18 @@ async def topic_detail(request: Request, topic_name: str):
     )
 
 
+@app.get("/digest", response_class=HTMLResponse)
+async def digest_page(request: Request):
+    """Show the latest digest results."""
+    return templates.TemplateResponse(
+        request=request,
+        name="digest.html",
+        context={
+            "config": _load_config(),
+        },
+    )
+
+
 # ─── API Endpoints ─────────────────────────────────────────────────────────────
 
 
@@ -124,6 +141,50 @@ async def api_disable_topic(topic_name: str):
     return {"status": "ok", "action": "disabled", "topic": topic_name}
 
 
+@app.delete("/api/topics/{topic_name}")
+async def api_delete_topic(topic_name: str):
+    """Delete a topic permanently."""
+    config = _load_config()
+    topic = get_topic(config, topic_name)
+    if not topic:
+        raise HTTPException(status_code=404, detail=f"Topic '{topic_name}' not found")
+    config["topics"] = [t for t in config["topics"] if t["name"].lower() != topic_name.lower()]
+    _save_config(config)
+    return {"status": "ok", "action": "deleted", "topic": topic_name}
+
+
+@app.post("/api/topics")
+async def api_add_topic(
+    name: str = Form(...),
+    summary: str = Form(""),
+    max_items: int = Form(3),
+):
+    """Add a new topic."""
+    config = _load_config()
+
+    # Check for duplicates
+    if get_topic(config, name):
+        raise HTTPException(status_code=409, detail=f"Topic '{name}' already exists")
+
+    new_topic = {
+        "name": name,
+        "enabled": False,
+        "max_items": max_items,
+        "summary": summary or f"{name} developments",
+        "rss_feeds": [],
+        "x_queries": [],
+        "x_allowed_handles": [],
+        "x_excluded_handles": [],
+        "keywords_include": [],
+        "keywords_exclude": [],
+        "importance_rules": f"Define what counts as important for {name}.\nInclude: major developments, breakthroughs, regulatory changes.\nExclude: minor updates, speculation, memes.",
+    }
+
+    config["topics"].append(new_topic)
+    _save_config(config)
+    return {"status": "ok", "action": "created", "topic": name}
+
+
 @app.get("/api/topics/{topic_name}/test")
 async def api_test_topic(topic_name: str):
     """Show what searches would run for a topic (dry run)."""
@@ -150,6 +211,51 @@ async def api_test_topic(topic_name: str):
     }
 
 
+@app.post("/api/digest/run")
+async def api_run_digest():
+    """Run a digest scan across all enabled topics and return results."""
+    config = _load_config()
+    enabled_topics = get_enabled_topics(config)
+
+    if not enabled_topics:
+        return {"status": "ok", "message": "No enabled topics to scan", "digest": ""}
+
+    # Initialize sources
+    rss_source = RSSSource()
+
+    # Collect items per topic
+    topic_results = {}
+    errors = []
+
+    for topic in enabled_topics:
+        topic_name = topic["name"]
+        all_items = []
+
+        # Fetch RSS items
+        try:
+            rss_items = rss_source.fetch(topic, since=datetime.now() - timedelta(hours=24))
+            all_items.extend(rss_items)
+        except Exception as e:
+            errors.append(f"RSS error for {topic_name}: {e}")
+
+        # Apply filters
+        engine = FilterEngine(topic)
+        filtered = engine.filter_items(all_items)
+        topic_results[topic_name] = filtered
+
+    # Generate digest
+    generator = DigestGenerator(config)
+    digest_text = generator.generate(topic_results)
+
+    return {
+        "status": "ok",
+        "topics_scanned": len(enabled_topics),
+        "total_items": sum(len(items) for items in topic_results.values()),
+        "errors": errors,
+        "digest": digest_text,
+    }
+
+
 @app.get("/api/config")
 async def api_get_config():
     """Return the full configuration."""
@@ -163,4 +269,4 @@ def create_app():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("web.app:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("web.app:app", host="127.0.0.1", port=9090, reload=True)

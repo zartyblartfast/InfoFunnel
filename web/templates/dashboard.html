@@ -12,10 +12,11 @@
         header h1 { font-size: 1.5rem; color: #38bdf8; }
         header h1 span { color: #94a3b8; font-weight: 400; }
         .btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+        .btn:hover { opacity: 0.85; }
         .btn-primary { background: #38bdf8; color: #0f1117; }
-        .btn-primary:hover { background: #7dd3fc; }
         .btn-success { background: #22c55e; color: white; }
         .btn-danger { background: #ef4444; color: white; }
+        .btn-warning { background: #f59e0b; color: #0f1117; }
         .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
         .card { background: #1e293b; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
@@ -27,7 +28,7 @@
         .tag { display: inline-block; background: #334155; color: #94a3b8; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin: 0.15rem; }
         .tag.include { background: #1e3a5f; color: #7dd3fc; }
         .tag.exclude { background: #5f1e1e; color: #fca5a5; }
-        .actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .actions { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
         .stat-card { background: #1e293b; border-radius: 10px; padding: 1.25rem; border: 1px solid #334155; text-align: center; }
         .stat-card .number { font-size: 2rem; font-weight: 700; color: #38bdf8; }
@@ -36,13 +37,23 @@
         a { color: #38bdf8; text-decoration: none; }
         a:hover { text-decoration: underline; }
         .empty-state { text-align: center; padding: 3rem; color: #64748b; }
+        .digest-output { background: #0f1117; border-radius: 8px; padding: 1.5rem; border: 1px solid #334155; white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6; margin-top: 1rem; }
+        .digest-loading { text-align: center; padding: 2rem; color: #94a3b8; }
+        .add-topic-form { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+        .add-topic-form input { background: #0f1117; border: 1px solid #334155; border-radius: 6px; padding: 0.5rem 0.75rem; color: #e2e8f0; font-size: 0.85rem; }
+        .add-topic-form input::placeholder { color: #64748b; }
+        .confirm-delete { background: #7f1d1d; padding: 0.5rem; border-radius: 6px; display: none; }
+        .confirm-delete.show { display: flex; gap: 0.5rem; align-items: center; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>InfoFunnel <span>Dashboard</span></h1>
-            <a href="/docs" class="btn btn-primary btn-sm">API Docs</a>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-warning btn-sm" onclick="runDigest()">▶ Run Digest</button>
+                <a href="/docs" class="btn btn-primary btn-sm">API Docs</a>
+            </div>
         </header>
 
         <!-- Global Stats -->
@@ -65,10 +76,16 @@
             </div>
         </div>
 
+        <!-- Digest Output -->
+        <div id="digest-output" style="display: none;" class="card">
+            <h2 style="margin-bottom: 1rem;">Latest Digest</h2>
+            <div id="digest-content" class="digest-output"></div>
+        </div>
+
         <!-- Topics -->
         {% if config.topics %}
             {% for topic in config.topics %}
-            <div class="card">
+            <div class="card" id="topic-{{ topic.name }}">
                 <div class="card-header">
                     <div>
                         <h2>
@@ -125,15 +142,32 @@
                     {% endif %}
                     <a href="/api/topics/{{ topic.name }}/test" class="btn btn-primary btn-sm">Test</a>
                     <a href="/topic/{{ topic.name }}" class="btn btn-primary btn-sm">Details</a>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete('{{ topic.name }}')">Delete</button>
+                </div>
+
+                <div id="delete-{{ topic.name }}" class="confirm-delete">
+                    <span style="color: #fca5a5; font-size: 0.85rem;">Delete {{ topic.name }}? This cannot be undone.</span>
+                    <button class="btn btn-danger btn-sm" onclick="deleteTopic('{{ topic.name }}')">Yes, Delete</button>
+                    <button class="btn btn-sm" style="background: #334155; color: #94a3b8;" onclick="cancelDelete('{{ topic.name }}')">Cancel</button>
                 </div>
             </div>
             {% endfor %}
         {% else %}
             <div class="empty-state">
                 <h2>No topics configured</h2>
-                <p>Add topics to config/news-monitor.yaml to get started.</p>
+                <p>Add topics below to get started.</p>
             </div>
         {% endif %}
+
+        <!-- Add Topic -->
+        <div class="card">
+            <h2 style="margin-bottom: 1rem;">Add New Topic</h2>
+            <form class="add-topic-form" onsubmit="addTopic(event)">
+                <input type="text" id="new-topic-name" placeholder="Topic name (e.g., Solana)" required style="flex: 1; min-width: 200px;">
+                <input type="text" id="new-topic-summary" placeholder="Brief description (optional)" style="flex: 2; min-width: 250px;">
+                <button type="submit" class="btn btn-success btn-sm">Add Topic</button>
+            </form>
+        </div>
 
         <p class="config-path">Config: {{ config_path }}</p>
     </div>
@@ -142,12 +176,69 @@
         async function toggleTopic(name, enable) {
             const action = enable ? 'enable' : 'disable';
             const resp = await fetch(`/api/topics/${encodeURIComponent(name)}/${action}`, { method: 'POST' });
+            if (resp.ok) location.reload();
+            else alert(`Error: ${(await resp.json()).detail}`);
+        }
+
+        function confirmDelete(name) {
+            document.querySelectorAll('.confirm-delete').forEach(el => el.classList.remove('show'));
+            document.getElementById(`delete-${name}`).classList.add('show');
+        }
+
+        function cancelDelete(name) {
+            document.getElementById(`delete-${name}`).classList.remove('show');
+        }
+
+        async function deleteTopic(name) {
+            if (!confirm(`Are you sure you want to delete "${name}"? This cannot be undone.`)) return;
+            const resp = await fetch(`/api/topics/${encodeURIComponent(name)}`, { method: 'DELETE' });
+            if (resp.ok) {
+                const card = document.getElementById(`topic-${name}`);
+                if (card) card.remove();
+                else location.reload();
+            } else {
+                alert(`Error: ${(await resp.json()).detail}`);
+            }
+        }
+
+        async function addTopic(event) {
+            event.preventDefault();
+            const name = document.getElementById('new-topic-name').value.trim();
+            const summary = document.getElementById('new-topic-summary').value.trim();
+            if (!name) return;
+
+            const form = new FormData();
+            form.append('name', name);
+            form.append('summary', summary);
+
+            const resp = await fetch('/api/topics', { method: 'POST', body: form });
             if (resp.ok) {
                 location.reload();
             } else {
                 const data = await resp.json();
                 alert(`Error: ${data.detail}`);
             }
+        }
+
+        async function runDigest() {
+            const output = document.getElementById('digest-output');
+            const content = document.getElementById('digest-content');
+            output.style.display = 'block';
+            content.innerHTML = '<div class="digest-loading">Scanning sources...</div>';
+
+            try {
+                const resp = await fetch('/api/digest/run', { method: 'POST' });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    content.textContent = data.digest || 'No significant developments found.';
+                } else {
+                    content.textContent = `Error: ${data.message || 'Unknown error'}`;
+                }
+            } catch (e) {
+                content.textContent = `Error: ${e.message}`;
+            }
+
+            output.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
 </body>
