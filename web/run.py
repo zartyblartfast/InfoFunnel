@@ -7,13 +7,15 @@ Usage:
 Then open http://127.0.0.1:9090 in your browser.
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add project root to Python path so `web` and `src` packages are findable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+# Also set it in the environment so uvicorn's reloader child processes inherit it
+os.environ["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + os.environ.get("PYTHONPATH", "")
 
 import uvicorn
 
@@ -27,5 +29,5 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=PORT,
         reload=True,
-        reload_dirs=["web", "config"],
+        reload_includes=["web/**/*.py", "config/*.yaml"],
     )
