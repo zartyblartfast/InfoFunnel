@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Personal Productivity Sender/Service Registry Row",
+  "type": "object",
+  "required": [
+    "sender_or_domain",
+    "service",
+    "trust_level",
+    "user_relationship",
+    "cost_status",
+    "default_urgency",
+    "default_disposition",
+    "action_policy",
+    "mutation_policy",
+    "confidence",
+    "last_confirmed"
+  ],
+  "properties": {
+    "sender_or_domain": {
+      "type": "string"
+    },
+    "service": {
+      "type": "string"
+    },
+    "match_type": {
+      "enum": [
+        "exact_sender",
+        "domain",
+        "service_keyword"
+      ]
+    },
+    "trust_level": {
+      "enum": [
+        "trusted_confirmed",
+        "likely_legitimate",
+        "unknown",
+        "suspicious",
+        "blocked_or_unwanted"
+      ]
+    },
+    "user_relationship": {
+      "enum": [
+        "current_applicable",
+        "historical_unused",
+        "unknown_applicability",
+        "not_applicable",
+        "unwanted_marketing"
+      ]
+    },
+    "cost_status": {
+      "enum": [
+        "free_tier",
+        "paid_active",
+        "paid_possible",
+        "no_account",
+        "unknown",
+        "not_relevant"
+      ]
+    },
+    "default_message_category": {
+      "enum": [
+        "billing",
+        "payment_failure",
+        "security",
+        "account_access",
+        "government_tax",
+        "pension_finance",
+        "calendar_event",
+        "delivery_travel",
+        "subscription",
+        "quota_usage",
+        "newsletter",
+        "marketing",
+        "job_alert",
+        "community_digest",
+        "social",
+        "system_notification",
+        "unknown"
+      ]
+    },
+    "default_urgency": {
+      "enum": [
+        "immediate",
+        "daily_briefing",
+        "weekly_cleanup",
+        "low_priority",
+        "suppress_unless_changed"
+      ]
+    },
+    "default_disposition": {
+      "enum": [
+        "action_required_now",
+        "review_today",
+        "review_when_convenient",
+        "optional_cleanup",
+        "monitor_only",
+        "safe_to_ignore",
+        "noise_candidate",
+        "suspicious_do_not_click",
+        "needs_user_classification"
+      ]
+    },
+    "action_policy": {
+      "enum": [
+        "report_only",
+        "ask_user",
+        "manual_check",
+        "optional_account_closure",
+        "possible_cancellation",
+        "propose_filter",
+        "propose_unsubscribe",
+        "ignore"
+      ]
+    },
+    "mutation_policy": {
+      "enum": [
+        "none_read_only",
+        "propose_only",
+        "approved_specific_action",
+        "approved_class_action"
+      ]
+    },
+    "confidence": {
+      "enum": [
+        "high",
+        "medium",
+        "low",
+        "needs_review"
+      ]
+    },
+    "evidence_summary": {
+      "type": "string"
+    },
+    "last_confirmed": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

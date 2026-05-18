@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets -- NEVER commit these
+.env
+auth.json
+*.token
+*.key
+
+# Data (runtime, not source)
+data/blogwatcher/*.db
+data/cache/
+
+# Config with secrets
+config/news-monitor.local.yaml
+
+# Temp
+.tmp/
+.pytest_cache/
+*.log

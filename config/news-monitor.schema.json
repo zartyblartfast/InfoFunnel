@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "News Monitor Configuration",
+  "type": "object",
+  "properties": {
+    "global": {
+      "type": "object",
+      "properties": {
+        "schedule": {"type": "string"},
+        "delivery": {"type": "string"},
+        "model": {"type": "string"},
+        "max_total_items": {"type": "integer", "minimum": 1, "maximum": 50},
+        "quiet_hours": {"type": "string"}
+      }
+    },
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "enabled": {"type": "boolean"},
+          "max_items": {"type": "integer", "minimum": 1, "maximum": 20},
+          "summary": {"type": "string"},
+          "rss_feeds": {"type": "array", "items": {"type": "string"}},
+          "x_queries": {"type": "array", "items": {"type": "string"}},
+          "x_allowed_handles": {"type": "array", "items": {"type": "string"}},
+          "x_excluded_handles": {"type": "array", "items": {"type": "string"}},
+          "keywords_include": {"type": "array", "items": {"type": "string"}},
+          "keywords_exclude": {"type": "array", "items": {"type": "string"}},
+          "importance_rules": {"type": "string"}
+        },
+        "required": ["name"]
+      }
+    }
+  }
+}

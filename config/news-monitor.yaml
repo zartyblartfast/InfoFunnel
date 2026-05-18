@@ -1,0 +1,176 @@
+# Personal Information Monitor Configuration
+# ==========================================
+# Admin-controlled configuration for Hermes background news/information monitoring.
+#
+# TOPICS: Each topic is a monitored subject (e.g., Bitcoin, AI, etc.)
+#   - name: Display name for the topic
+#   - enabled: true/false to pause/resume monitoring
+#   - max_items: Maximum items per digest for this topic
+#   - rss_feeds: List of blogwatcher feed names to include
+#   - x_queries: List of x_search queries to run
+#   - x_allowed_handles: X accounts to exclusively search (optional)
+#   - x_excluded_handles: X accounts to exclude (optional)
+#   - keywords_include: Only include items matching these keywords
+#   - keywords_exclude: Never include items matching these keywords
+#   - importance_rules: Guidelines for what counts as "important"
+#
+# GLOBAL SETTINGS:
+#   - schedule: Cron schedule for the digest job
+#   - delivery: Where to send digests (origin = current chat)
+#   - model: Model override for the cron job (cheaper = faster)
+
+global:
+  schedule: "0 8,12,18,22 * * *"   # 4x daily: 8am, noon, 6pm, 10pm
+  delivery: origin                   # deliver to current chat
+  model: ""                          # empty = use default model
+  max_total_items: 10                # hard cap across all topics
+  quiet_hours: "23:00-07:00"        # suppress non-urgent digests
+
+topics:
+
+  - name: "Bitcoin"
+    enabled: true
+    max_items: 5
+    summary: "Bitcoin and major crypto market developments"
+
+    rss_feeds:
+      - "CoinDesk"
+      - "Bitcoin Magazine"
+      # Note: Glassnode RSS is unavailable (404). Using X search for on-chain data instead.
+      # To add more feeds: python scripts/news-monitor-admin.py add-feed "Bitcoin"
+
+    x_queries:
+      - "Bitcoin"
+      - "BTC price"
+      - "Bitcoin regulation OR SEC OR ETF"
+
+    x_allowed_handles:
+      - "cz_binance"
+      - "APompliano"
+      - "saylor"
+      - "VitalikButerin"
+      - "BitcoinMagazine"
+      - "coindesk"
+      - "TheBlock__"
+      - "GlassnodeAlerts"
+      - "WhaleAlert"
+
+    x_excluded_handles:
+      - "elonmusk"           # too noisy for crypto signals
+      - "CryptoCobain"       # too memey
+
+    keywords_include:
+      - "Bitcoin"
+      - "BTC"
+      - "ETF"
+      - "SEC"
+      - "regulation"
+      - "halving"
+      - "adoption"
+      - "institutional"
+      - "hack"
+      - "exploit"
+      - "upgrade"
+      - "Lightning"
+      - "Ordinals"
+      - "BRC-20"
+
+    keywords_exclude:
+      - "shitcoin"
+      - "memecoin"
+      - "1000x"
+      - "moon"
+      - "lamborghini"
+      - "giveaway"
+      - "airdrop"            # unless >$100M
+
+    importance_rules: |
+      Only include items that meet at least ONE of these criteria:
+      - Major price move (>5% in 24h) with a clear catalyst
+      - Regulatory action (SEC, CFTC, Fed, major country)
+      - Security incident (hack, exploit, >$10M)
+      - Institutional adoption (ETF, corporate treasury, bank)
+      - Significant protocol upgrade or change
+      - High-engagement post (>500 likes) from Tier 1 account
+
+      EXCLUDE:
+      - Price predictions without analysis or catalyst
+      - Meme posts or jokes
+      - Altcoin promotion disguised as Bitcoin news
+      - Duplicate stories (same event, multiple sources)
+      - Posts primarily about altcoins
+
+  - name: "Ethereum"
+    enabled: false                  # disabled by default -- enable when ready
+    max_items: 3
+    summary: "Ethereum ecosystem developments"
+
+    rss_feeds:
+      - "Ethereum Blog"
+
+    x_queries:
+      - "Ethereum"
+      - "ETH price"
+      - "Ethereum upgrade OR EIP"
+
+    x_allowed_handles:
+      - "VitalikButerin"
+      - "ethereum"
+      - "BanklessHQ"
+
+    keywords_include:
+      - "Ethereum"
+      - "ETH"
+      - "EIP"
+      - "upgrade"
+      - "staking"
+      - "L2"
+      - "rollup"
+
+    keywords_exclude:
+      - "meme"
+      - "NFT"                    # unless major collection/infra
+
+    importance_rules: |
+      Focus on: protocol upgrades, major L2 developments, staking changes,
+      regulatory clarity, significant security incidents.
+      Skip: NFT floor prices, minor DeFi yield changes, memes.
+
+# ==========================================
+# ADDING A NEW TOPIC
+# ==========================================
+# 1. Copy the template below and fill in your values
+# 2. Set enabled: true when ready
+# 3. Run: hermes chat -q "Reload the news monitor config and confirm the new topic is active"
+#
+# TEMPLATE:
+#
+#  - name: "My Topic"
+#    enabled: false
+#    max_items: 3
+#    summary: "Brief description"
+#
+#    rss_feeds:
+#      - "Feed Name"            # must match blogwatcher-cli blog name
+#
+#    x_queries:
+#      - "search query 1"
+#      - "search query 2"
+#
+#    x_allowed_handles:         # optional -- leave empty to search all
+#      - "handle1"
+#      - "handle2"
+#
+#    x_excluded_handles:        # optional
+#      - "noisy_handle"
+#
+#    keywords_include:          # optional -- leave empty to include all
+#      - "keyword1"
+#      - "keyword2"
+#
+#    keywords_exclude:          # optional
+#      - "spam_keyword"
+#
+#    importance_rules: |
+#      Describe what counts as important for this topic.
+#      Be specific about what to include and exclude.
